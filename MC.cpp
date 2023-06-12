@@ -104,7 +104,7 @@ void traceback(list<pair<int, int>>* path, int* choices, int cnt, float R, int N
 void mc_process(int n) {
     list<float> reward;
     list<pair<int, int> > path;
-    int choices[100];
+    int choices[200];
     int cnt=0;
 
     path.push_back(starting_point);
