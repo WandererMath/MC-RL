@@ -12,15 +12,16 @@
 #include <algorithm>
 #include <thread>
 
-#define X 5
-#define Y 5
+#define X 10
+#define Y 10
 #define alpha 5
 #define gamma 0.9
+#define recLength 50
 
 
 using namespace std;
 float A[X][Y][4];
-list<pair<int, int>> dead = {pair(2,1),pair(1,2)};
+list<pair<int, int>> dead = {pair(1,2),pair(2,1)};
 list<pair<int, int>> good = { pair(2,2)};
 pair<int, int> starting_point = pair(0, 0);
 int windowWidth = 500;
@@ -29,6 +30,7 @@ list<pair<int, int>> rectangle;
 
 int Step = 1;
 float success = 0;
+float learning_rate = 0.1;
 
 
 
@@ -93,7 +95,7 @@ void traceback(list<pair<int, int>>* path, int* choices, int cnt, float R, int N
         j = point.second;
         t = choices[cnt];
         cnt -= 1;
-        A[i][j][t] = (N * A[i][j][t] + R) / (N + 1);
+        A[i][j][t] += (R-A[i][j][t])*learning_rate;
         R *= gamma;
     }
 }
@@ -185,10 +187,10 @@ int main_console() {
 
 
 void drawPosition(int x, int y, float R=0, float G=0, float B=1) {
-    x *= 100;
-    y *= 100;
+    x *= recLength;
+    y *= recLength;
     glColor3f(R, G, B);
-    glRecti(x+10, y+10, x + 90, y + 90);
+    glRecti(x+10, y+10, x + recLength-10, y +recLength-10);
 }
 
 void illustrate() {
@@ -240,7 +242,7 @@ void mc_illustrate(bool soft=true) {
             y += 1;
 
         rectangle.push_back(pair(x, y));
-        if (rectangle.size() > 15)
+        if (rectangle.size() > 100)
             return;
         if (x < 0 || y < 0 || x >= X || y >= Y || contains(&dead, x, y)) {
             break;
@@ -263,8 +265,8 @@ void timer(int value) {
         Step += 1;
         //cout <<Step << endl;
     }
-    //mc_illustrate(false);
-    mc_illustrate();
+    mc_illustrate(false);
+    //mc_illustrate();
     /*
     for (auto p : {0,1,2,3}) {
         cout << A[3][2][p] << "\t";
@@ -275,16 +277,17 @@ void timer(int value) {
 
     glutPostRedisplay();
     // Call the timer callback again after 100ms
-    glutTimerFunc(1, timer, 0);
+    glutTimerFunc(200, timer, 0);
 }
 
 int main_graph(int argc, char** argv) {
     srand(time(NULL));
     init();
+    /*
     for (int i = 0; i < 10000; i++) {
         mc_process(Step);
         Step += 1;
-    }
+    }*/
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
