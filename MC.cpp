@@ -14,15 +14,16 @@
 
 #define X 10
 #define Y 10
-#define alpha 5
+#define alpha 0.3
 #define gamma 0.9
 #define recLength 50
+#define MAX_STEPS 200
 
 
 using namespace std;
-float A[X][Y][4];
-list<pair<int, int>> dead = {pair(1,2),pair(2,1)};
-list<pair<int, int>> good = { pair(2,2)};
+float STATES[X][Y][4];
+list<pair<int, int>> dead = {pair(5,6),pair(6,5), pair(7,6)};
+list<pair<int, int>> good = { pair(6,6)};
 pair<int, int> starting_point = pair(0, 0);
 int windowWidth = 500;
 int windowHeight = 500;
@@ -38,7 +39,7 @@ void init() {
     for (int i = 0; i < X; i++) {
         for (int j = 0; j < Y; j++) {
             for (int k = 0; k < 4; k++) {
-                A[i][j][k] = 10;
+                STATES[i][j][k] = 10;
             }
         }
     }
@@ -62,14 +63,45 @@ int soft_choose(int* d, int N) {
             return i;
         }
     }
+    //Problematic?
 }
 
-int choice(int i, int j) {
-    int F[4];
-    for (int k = 0; k < 4; k += 1) {
-            F[k] = A[i][j][k]+alpha;
+
+int hard_choose(int x, int y) {
+    float value = STATES[x][y][0];
+    int r = 0;
+    for (int k = 1; k < 4; k++) {
+        if (STATES[x][y][k] > value) {
+            r = k;
+            value = STATES[x][y][k];
+        }
     }
-    return soft_choose(F, 4);
+    return r;
+}
+
+
+int choice(int i, int j) {
+    //int F[4];
+    //for (int k = 0; k < 4; k += 1) {
+     //       F[k] = A[i][j][k]+alpha;
+    //}
+    
+
+    //return soft_choose(F, 4);
+
+    int t = hard_choose(i, j);
+    int r = rand() % 4;
+
+    if ((float)rand() / RAND_MAX >= alpha)
+        return t;
+    else {
+
+        while (r == t) {
+            r = rand() % 4;
+        }
+        return r;
+    }
+
 }
 
 bool contains(list<pair<int, int>>* set, int x, int y) {
@@ -90,12 +122,21 @@ void traceback(list<pair<int, int>>* path, int* choices, int cnt, float R, int N
     R *= gamma;
 
     int i, j, t;
+    float previous;
     for (auto point : *path) {
         i = point.first;
         j = point.second;
         t = choices[cnt];
         cnt -= 1;
-        A[i][j][t] += (R-A[i][j][t])*learning_rate;
+        if (i<0||i>9 ||j<0||j>9||t<0||t>9)
+            cout << i << "  " << j << " " << t << endl;
+        try {
+            previous = STATES[i][j][t];
+        }
+        catch(exception& ex){
+            cout << i << "  " << j << " " << t << endl;
+        }
+        STATES[i][j][t] += (R-previous)*learning_rate;
         R *= gamma;
     }
 }
@@ -104,7 +145,7 @@ void traceback(list<pair<int, int>>* path, int* choices, int cnt, float R, int N
 void mc_process(int n) {
     list<float> reward;
     list<pair<int, int> > path;
-    int choices[200];
+    int choices[MAX_STEPS];
     int cnt=0;
 
     path.push_back(starting_point);
@@ -114,6 +155,8 @@ void mc_process(int n) {
     float R;
     while (true) {
         t = choice(x, y);
+        if (t < 0 || t>3)
+            cout << t;
         choices[cnt]=t;
         cnt += 1;
         //cnt := number of elements in choices[]
@@ -128,7 +171,7 @@ void mc_process(int n) {
             y += 1;
 
         
-        if (x < 0 || y < 0 || x>=X || y>=Y||contains(&dead, x, y)) {
+        if (x < 0 || y < 0 || x>=X || y>=Y||contains(&dead, x, y)||path.size()>MAX_STEPS-1) {
             //do dead
             R = 0;
             break;
@@ -167,14 +210,14 @@ int main_console() {
         cout << "Line " << i << endl;
         for (int j = 0; j < Y; j++) {
             for (int k = 0; k < 4; k++) {
-                cout << A[i][j][k] << "\t";
+                cout << STATES[i][j][k] << "\t";
             }
             cout << endl;
         }
         cout << endl;
     }
     cout << endl;
-    for (auto t : A[3][2])
+    for (auto t : STATES[3][2])
         cout << t << "\t";
     return 0;
 }
@@ -208,17 +251,6 @@ void illustrate() {
     glutSwapBuffers();
 }
 
-int hard_choose(int x, int y) {
-    float value=A[x][y][0];
-    int r = 0;
-    for (int k = 1; k < 4; k++) {
-        if (A[x][y][k] > value) {
-            r = k;
-            value = A[x][y][k];
-        }
-    }
-    return r;
-}
 
 void mc_illustrate(bool soft=true) {
     rectangle.clear();
@@ -263,31 +295,18 @@ void timer(int value) {
     for (int i = 0; i < 100; i++) {
         mc_process(Step);
         Step += 1;
-        //cout <<Step << endl;
     }
     mc_illustrate(false);
-    //mc_illustrate();
-    /*
-    for (auto p : {0,1,2,3}) {
-        cout << A[3][2][p] << "\t";
-    }
-    cout << endl;*/
-    //cout << success / Step << endl;
 
 
     glutPostRedisplay();
-    // Call the timer callback again after 100ms
+    // Call the timer callback again after 200ms
     glutTimerFunc(200, timer, 0);
 }
 
 int main_graph(int argc, char** argv) {
     srand(time(NULL));
     init();
-    /*
-    for (int i = 0; i < 10000; i++) {
-        mc_process(Step);
-        Step += 1;
-    }*/
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
@@ -309,7 +328,7 @@ int main_graph(int argc, char** argv) {
 
 int main(int argc, char** argv) {
     int a;
-    cout << "1. Graphical\n2.Print Result\n";
+    cout << "1. Graphical\n2. Print Result\n";
     cin >> a;
     if (a == 1)
         main_graph(argc, argv);
